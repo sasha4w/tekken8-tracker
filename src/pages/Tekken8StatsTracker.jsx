@@ -45,7 +45,7 @@ export default function Tekken8StatsTracker() {
     date: new Date().toISOString().split("T")[0],
     result: "win",
     score: "3-0",
-    myCharacter: "",
+    myCharacter: userProfile.mainCharacter || "", // Préremplir avec le perso principal
     myRank: userProfile.currentRank || "",
     opponentCharacter: "",
     opponentRank: "",
@@ -53,6 +53,7 @@ export default function Tekken8StatsTracker() {
     stage: "",
     difficulty: "3",
     notes: "",
+    pointsEarned: "0", // Nouveau champ
   });
 
   const [profileForm, setProfileForm] = useState({
@@ -491,7 +492,6 @@ export default function Tekken8StatsTracker() {
             playerTitles={determinePlayerTitles()}
           />
         )}
-
         {activeTab === "form" && (
           <FormTab
             formData={formData}
@@ -501,6 +501,7 @@ export default function Tekken8StatsTracker() {
             tekkenRanks={tekkenRanks}
             tekkenStages={tekkenStages}
             getAvailableScores={getAvailableScores}
+            userProfile={userProfile} // Nouvelle prop
           />
         )}
 

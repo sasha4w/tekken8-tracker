@@ -6,7 +6,7 @@ export default function Header() {
           Tekken 8 <span>Stats Tracker</span>
         </h1>
         <img
-          src="/src/assets/logo/tekken-header.png"
+          src="/tekken-header.png"
           alt="Logo Tekken Header"
           className="header-logo"
         />

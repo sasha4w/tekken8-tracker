@@ -8,30 +8,27 @@ export default function HistoryTab({
   tekkenCharacters,
   tekkenStages,
   tekkenRanks,
-  editMatch, // Nouvelle prop pour la modification
+  editMatch,
 }) {
-  // État pour gérer les cases à cocher
   const [selectedMatches, setSelectedMatches] = useState([]);
+  const [hoveredRowId, setHoveredRowId] = useState(null);
 
-  // Fonction pour gérer la sélection/désélection d'un match
   const toggleMatchSelection = (matchId) => {
-    if (selectedMatches.includes(matchId)) {
-      setSelectedMatches(selectedMatches.filter((id) => id !== matchId));
-    } else {
-      setSelectedMatches([...selectedMatches, matchId]);
-    }
+    setSelectedMatches(
+      selectedMatches.includes(matchId)
+        ? selectedMatches.filter((id) => id !== matchId)
+        : [...selectedMatches, matchId]
+    );
   };
 
-  // Fonction pour sélectionner/désélectionner tous les matchs
   const toggleSelectAll = () => {
-    if (selectedMatches.length === filteredMatches.length) {
-      setSelectedMatches([]);
-    } else {
-      setSelectedMatches(filteredMatches.map((match) => match.id));
-    }
+    setSelectedMatches(
+      selectedMatches.length === filteredMatches.length
+        ? []
+        : filteredMatches.map((match) => match.id)
+    );
   };
 
-  // Fonction pour supprimer tous les matchs sélectionnés
   const deleteSelectedMatches = () => {
     if (selectedMatches.length === 0) return;
 
@@ -40,107 +37,139 @@ export default function HistoryTab({
         `Êtes-vous sûr de vouloir supprimer ${selectedMatches.length} match(s) ?`
       )
     ) {
-      selectedMatches.forEach((id) => deleteMatch(id, false)); // false pour éviter la confirmation individuelle
+      selectedMatches.forEach((id) => deleteMatch(id, false));
       setSelectedMatches([]);
     }
   };
 
-  // Fonction pour obtenir l'URL de l'avatar du personnage
-  //   const getCharacterAvatar = (character) => {
-  //     // Ici, vous devriez remplacer ceci par votre logique réelle pour récupérer les avatars
-  //     return `/assets/characters/${character
-  //       .toLowerCase()
-  //       .replace(/\s+/g, "-")}.png`;
-  //   };
-
   return (
-    <div className="card">
-      <h2>Historique des matchs</h2>
-
-      {/* Filtres */}
-      <div className="filter-grid">
-        <div className="filter-item">
-          <label htmlFor="filter-myCharacter">Mon personnage</label>
-          <select
-            id="filter-myCharacter"
-            value={filters.myCharacter}
-            onChange={handleFilterChange}
-            className="filter-select"
-          >
-            <option value="">Tous</option>
-            {tekkenCharacters.map((char) => (
-              <option key={char} value={char}>
-                {char}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-item">
-          <label htmlFor="filter-opponentCharacter">Personnage adverse</label>
-          <select
-            id="filter-opponentCharacter"
-            value={filters.opponentCharacter}
-            onChange={handleFilterChange}
-            className="filter-select"
-          >
-            <option value="">Tous</option>
-            {tekkenCharacters.map((char) => (
-              <option key={char} value={char}>
-                {char}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-item">
-          <label htmlFor="filter-opponentName">Nom de l'adversaire</label>
-          <input
-            type="text"
-            id="filter-opponentName"
-            value={filters.opponentName}
-            onChange={handleFilterChange}
-            placeholder="Rechercher par nom..."
-            className="filter-input"
-          />
-        </div>
-
-        <div className="filter-item">
-          <label htmlFor="filter-stage">Terrain</label>
-          <select
-            id="filter-stage"
-            value={filters.stage}
-            onChange={handleFilterChange}
-            className="filter-select"
-          >
-            <option value="">Tous</option>
-            {tekkenStages.map((stage) => (
-              <option key={stage} value={stage}>
-                {stage}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-item">
-          <label htmlFor="filter-opponentRank">Rang adverse</label>
-          <select
-            id="filter-opponentRank"
-            value={filters.opponentRank}
-            onChange={handleFilterChange}
-            className="filter-select"
-          >
-            <option value="">Tous</option>
-            {tekkenRanks.map((rank) => (
-              <option key={rank} value={rank}>
-                {rank}
-              </option>
-            ))}
-          </select>
+    <div className="history-card">
+      <div className="card-header">
+        <h2>Historique des matchs</h2>
+        <div className="match-count-badge">
+          {filteredMatches.length} match
+          {filteredMatches.length !== 1 ? "s" : ""}
         </div>
       </div>
 
-      {/* Actions groupées */}
+      {/* Zone de filtres avec design amélioré */}
+      <div className="filters-section">
+        <div className="filters-container">
+          <div className="filter-column">
+            <div className="filter-item">
+              <label htmlFor="filter-myCharacter">
+                <span className="filter-icon">👤</span> Mon personnage
+              </label>
+              <select
+                id="filter-myCharacter"
+                value={filters.myCharacter}
+                onChange={handleFilterChange}
+                className="filter-select"
+              >
+                <option value="">Tous</option>
+                {tekkenCharacters.map((char) => (
+                  <option key={char} value={char}>
+                    {char}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-item">
+              <label htmlFor="filter-opponentCharacter">
+                <span className="filter-icon">👥</span> Personnage adverse
+              </label>
+              <select
+                id="filter-opponentCharacter"
+                value={filters.opponentCharacter}
+                onChange={handleFilterChange}
+                className="filter-select"
+              >
+                <option value="">Tous</option>
+                {tekkenCharacters.map((char) => (
+                  <option key={char} value={char}>
+                    {char}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="filter-column">
+            <div className="filter-item">
+              <label htmlFor="filter-opponentName">
+                <span className="filter-icon">🏷️</span> Nom de l'adversaire
+              </label>
+              <input
+                type="text"
+                id="filter-opponentName"
+                value={filters.opponentName}
+                onChange={handleFilterChange}
+                placeholder="Rechercher par nom..."
+                className="filter-input"
+              />
+            </div>
+
+            <div className="filter-item">
+              <label htmlFor="filter-stage">
+                <span className="filter-icon">🏟️</span> Terrain
+              </label>
+              <select
+                id="filter-stage"
+                value={filters.stage}
+                onChange={handleFilterChange}
+                className="filter-select"
+              >
+                <option value="">Tous</option>
+                {tekkenStages.map((stage) => (
+                  <option key={stage} value={stage}>
+                    {stage}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="filter-column">
+            <div className="filter-item">
+              <label htmlFor="filter-opponentRank">
+                <span className="filter-icon">🏆</span> Rang adverse
+              </label>
+              <select
+                id="filter-opponentRank"
+                value={filters.opponentRank}
+                onChange={handleFilterChange}
+                className="filter-select"
+              >
+                <option value="">Tous</option>
+                {tekkenRanks.map((rank) => (
+                  <option key={rank} value={rank}>
+                    {rank}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-item">
+              <label htmlFor="filter-result">
+                <span className="filter-icon">🎯</span> Résultat
+              </label>
+              <select
+                id="filter-result"
+                value={filters.result || ""}
+                onChange={handleFilterChange}
+                className="filter-select"
+              >
+                <option value="">Tous</option>
+                <option value="win">Victoires</option>
+                <option value="loss">Défaites</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Actions en masse */}
       {filteredMatches.length > 0 && (
         <div className="bulk-actions">
           <div className="select-all-container">
@@ -180,17 +209,17 @@ export default function HistoryTab({
         </div>
       )}
 
-      {/* Table Matchs */}
+      {/* Table avec design amélioré */}
       <div className="table-container">
         {filteredMatches.length > 0 ? (
           <table className="match-history-table">
             <thead>
               <tr className="table-header">
-                <th className="table-cell">Select</th>
+                <th className="table-cell cell-checkbox"></th>
                 <th className="table-cell">Date</th>
                 <th className="table-cell">Résultat</th>
                 <th className="table-cell">Score</th>
-                <th className="table-cell">Mon perso</th>
+                <th className="table-cell">Mon personnage</th>
                 <th className="table-cell">Mon rang</th>
                 <th className="table-cell">Perso adverse</th>
                 <th className="table-cell">Rang adverse</th>
@@ -211,8 +240,10 @@ export default function HistoryTab({
                     className={`table-row ${
                       match.result === "win" ? "win-row" : "loss-row"
                     }`}
+                    onMouseEnter={() => setHoveredRowId(match.id)}
+                    onMouseLeave={() => setHoveredRowId(null)}
                   >
-                    <td className="table-cell">
+                    <td className="table-cell cell-checkbox">
                       <input
                         type="checkbox"
                         checked={selectedMatches.includes(match.id)}
@@ -230,51 +261,50 @@ export default function HistoryTab({
                         {match.result === "win" ? "Victoire" : "Défaite"}
                       </span>
                     </td>
-                    <td className="table-cell">{match.score}</td>
+                    <td className="table-cell table-cell-center">
+                      {match.score}
+                    </td>
                     <td className="table-cell">
                       <div className="char-container">
-                        {/* {match.myCharacter && (
-                          <img
-                            src={getCharacterAvatar(match.myCharacter)}
-                            alt={match.myCharacter}
-                            className="character-avatar"
-                            onError={(e) => {
-                              e.target.src = "/assets/characters/default.png";
-                              e.target.onerror = null;
-                            }}
-                          />
-                        )} */}
-                        <span>{match.myCharacter}</span>
+                        <span className="char-name">{match.myCharacter}</span>
                       </div>
                     </td>
-                    <td className="table-cell">{match.myRank || "-"}</td>
+                    <td className="table-cell table-cell-center">
+                      {match.myRank || "-"}
+                    </td>
                     <td className="table-cell">
                       <div className="char-container">
-                        {/* {match.opponentCharacter && (
-                          <img
-                            src={getCharacterAvatar(match.opponentCharacter)}
-                            alt={match.opponentCharacter}
-                            className="character-avatar"
-                            onError={(e) => {
-                              e.target.src = "/assets/characters/default.png";
-                              e.target.onerror = null;
-                            }}
-                          />
-                        )} */}
-                        <span>{match.opponentCharacter}</span>
+                        <span className="char-name">
+                          {match.opponentCharacter}
+                        </span>
                       </div>
                     </td>
-                    <td className="table-cell">{match.opponentRank || "-"}</td>
+                    <td className="table-cell table-cell-center">
+                      {match.opponentRank || "-"}
+                    </td>
                     <td className="table-cell">{match.stage || "-"}</td>
                     <td className="table-cell">{match.opponentName || "-"}</td>
-                    <td className="table-cell">{match.difficulty}</td>
+                    <td className="table-cell table-cell-center">
+                      <div
+                        className={`difficulty-badge difficulty-${
+                          match.difficulty || 0
+                        }`}
+                      >
+                        {match.difficulty || "-"}
+                      </div>
+                    </td>
                     <td className="table-cell notes-cell">
                       {match.notes ? (
-                        <span title={match.notes}>
-                          {match.notes.length > 30
-                            ? match.notes.substring(0, 30) + "..."
-                            : match.notes}
-                        </span>
+                        <div className="notes-tooltip" title={match.notes}>
+                          <span className="notes-preview">
+                            {match.notes.length > 25
+                              ? match.notes.substring(0, 25) + "..."
+                              : match.notes}
+                          </span>
+                          {match.notes.length > 25 && (
+                            <div className="tooltip-content">{match.notes}</div>
+                          )}
+                        </div>
                       ) : (
                         "-"
                       )}
@@ -321,7 +351,19 @@ export default function HistoryTab({
           </table>
         ) : (
           <div className="empty-state">
-            Aucun match trouvé avec les filtres actuels
+            <div className="empty-state-icon">📊</div>
+            <p>Aucun match trouvé avec les filtres actuels</p>
+            <button
+              className="reset-filters-button"
+              onClick={() => {
+                // Ajouter la logique pour réinitialiser les filtres
+                handleFilterChange({
+                  target: { id: "reset-filters", value: "" },
+                });
+              }}
+            >
+              Réinitialiser les filtres
+            </button>
           </div>
         )}
       </div>
