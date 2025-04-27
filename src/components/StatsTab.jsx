@@ -11,6 +11,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import ActivityHeatmap from "./ActivityHeatmap";
 
 export default function StatsTab({
   filters,
@@ -27,12 +28,89 @@ export default function StatsTab({
   tekkenStages,
   tekkenRanks,
 }) {
+  // Calculate streaks
+  const calculateStreaks = () => {
+    const matches = [...filteredMatches].sort(
+      (a, b) => new Date(a.date) - new Date(b.date)
+    );
+    let currentWinStreak = 0;
+    let currentLoseStreak = 0;
+    let maxWinStreak = 0;
+    let maxLoseStreak = 0;
+
+    // Calculate current streak - need to check from newest to oldest
+    const reversedMatches = [...matches].reverse();
+    for (let i = 0; i < reversedMatches.length; i++) {
+      if (i === 0) {
+        if (reversedMatches[i].result === "win") {
+          currentWinStreak = 1;
+        } else {
+          currentLoseStreak = 1;
+        }
+      } else {
+        if (reversedMatches[i].result === reversedMatches[i - 1].result) {
+          if (reversedMatches[i].result === "win") {
+            currentWinStreak++;
+          } else {
+            currentLoseStreak++;
+          }
+        } else {
+          break;
+        }
+      }
+    }
+
+    // Calculate max streaks
+    let tempWinStreak = 0;
+    let tempLoseStreak = 0;
+
+    for (let i = 0; i < matches.length; i++) {
+      if (matches[i].result === "win") {
+        tempWinStreak++;
+        tempLoseStreak = 0;
+      } else {
+        tempLoseStreak++;
+        tempWinStreak = 0;
+      }
+
+      maxWinStreak = Math.max(maxWinStreak, tempWinStreak);
+      maxLoseStreak = Math.max(maxLoseStreak, tempLoseStreak);
+    }
+
+    return {
+      currentWinStreak,
+      currentLoseStreak,
+      maxWinStreak,
+      maxLoseStreak,
+    };
+  };
+
+  const streaks = calculateStreaks();
+
+  // Format winrate trend data to use dates instead of "Match X"
+  const formatWinRateTrendData = () => {
+    const recentMatches = [...filteredMatches]
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .slice(-10);
+
+    let trendWins = 0;
+    return recentMatches.map((match, index) => {
+      if (match.result === "win") trendWins++;
+      return {
+        date: match.date,
+        winRate: Math.round((trendWins / (index + 1)) * 100),
+      };
+    });
+  };
+
+  const winRateTrendData = formatWinRateTrendData();
+
   return (
     <div>
       {/* Filtres */}
       <div className="card">
         <h2>Filtres</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4">
+        <div className="filter-grid">
           <div>
             <label htmlFor="filter-myCharacter">Mon personnage</label>
             <select
@@ -111,7 +189,7 @@ export default function StatsTab({
       </div>
 
       {/* Statistiques principales */}
-      <div className="grid grid-cols-1 md:grid-cols-4">
+      <div className="stats-grid">
         <div className="stat-card">
           <h3 className="stat-title">Win Rate</h3>
           <div className="stat-value">{winRate}%</div>
@@ -133,20 +211,49 @@ export default function StatsTab({
         </div>
       </div>
 
+      {/* Streaks */}
+      <div className="streaks-container">
+        <div className="streak-card">
+          <h3 className="streak-title">Win Streak actuel</h3>
+          <div className="streak-value win-streak">
+            {streaks.currentWinStreak > 0 ? streaks.currentWinStreak : "-"}
+          </div>
+        </div>
+
+        <div className="streak-card">
+          <h3 className="streak-title">Lose Streak actuel</h3>
+          <div className="streak-value lose-streak">
+            {streaks.currentLoseStreak > 0 ? streaks.currentLoseStreak : "-"}
+          </div>
+        </div>
+
+        <div className="streak-card">
+          <h3 className="streak-title">Longest Win Streak</h3>
+          <div className="streak-value win-streak">{streaks.maxWinStreak}</div>
+        </div>
+
+        <div className="streak-card">
+          <h3 className="streak-title">Longest Lose Streak</h3>
+          <div className="streak-value lose-streak">
+            {streaks.maxLoseStreak}
+          </div>
+        </div>
+      </div>
+
+      {/* Activity Heatmap */}
+      <ActivityHeatmap matches={filteredMatches} />
+
       {/* Graphiques */}
-      <div
-        className="grid grid-cols-1 md:grid-cols-2"
-        style={{ marginTop: "1.5rem" }}
-      >
+      <div className="charts-grid">
         {/* Win Rate Trend */}
         <div className="card">
           <h2>Tendance Win Rate (10 derniers matchs)</h2>
           <div className="chart-container">
-            {winRateTrend.length > 0 ? (
+            {winRateTrendData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={winRateTrend}>
+                <LineChart data={winRateTrendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
-                  <XAxis dataKey="match" stroke="#cbd5e0" />
+                  <XAxis dataKey="date" stroke="#cbd5e0" />
                   <YAxis domain={[0, 100]} stroke="#cbd5e0" />
                   <Tooltip
                     contentStyle={{
@@ -202,7 +309,7 @@ export default function StatsTab({
       </div>
 
       {/* Stage Stats */}
-      <div className="card" style={{ marginTop: "1.5rem" }}>
+      <div className="card chart-card">
         <h2>Stats par terrain</h2>
         <div className="chart-container">
           {stageStats.length > 0 ? (
@@ -232,7 +339,7 @@ export default function StatsTab({
       </div>
 
       {/* Opponent Rank Stats */}
-      <div className="card" style={{ marginTop: "1.5rem" }}>
+      <div className="card chart-card">
         <h2>Performance par rangs adverses</h2>
         <div className="chart-container">
           {opponentRankStats.length > 0 ? (

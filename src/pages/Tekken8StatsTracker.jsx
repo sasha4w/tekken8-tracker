@@ -124,10 +124,27 @@ export default function Tekken8StatsTracker() {
     setFilters((prev) => ({ ...prev, [id.replace("filter-", "")]: value }));
   };
 
+  // Modifier la fonction handleSubmit pour gérer l'édition
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newMatch = { id: Date.now(), ...formData };
-    setMatches((prev) => [...prev, newMatch]);
+
+    if (isEditing) {
+      // Mode édition - mettre à jour le match existant
+      const updatedMatches = matches.map((match) =>
+        match.id === editingMatchId
+          ? { ...formData, id: editingMatchId }
+          : match
+      );
+      setMatches(updatedMatches);
+
+      // Réinitialiser le mode édition
+      setIsEditing(false);
+      setEditingMatchId(null);
+    } else {
+      // Mode ajout - créer un nouveau match
+      const newMatch = { id: Date.now(), ...formData };
+      setMatches((prev) => [...prev, newMatch]);
+    }
 
     // Réinitialiser partiellement le formulaire
     setFormData({
@@ -137,7 +154,6 @@ export default function Tekken8StatsTracker() {
       notes: "",
     });
   };
-
   const handleProfileSubmit = (e) => {
     e.preventDefault();
 
@@ -311,6 +327,27 @@ export default function Tekken8StatsTracker() {
       });
     }
   });
+  // Ajouter cette fonction dans le composant Tekken8StatsTracker
+  const editMatch = (matchId) => {
+    // Trouver le match à modifier
+    const matchToEdit = matches.find((match) => match.id === matchId);
+
+    if (matchToEdit) {
+      // Mettre à jour le formData avec les données du match
+      setFormData({ ...matchToEdit });
+
+      // Basculer vers l'onglet de formulaire
+      setActiveTab("form");
+
+      // Vous pouvez également ajouter un état pour suivre si nous sommes en mode édition
+      setIsEditing(true);
+      setEditingMatchId(matchId);
+    }
+  };
+
+  // Ajouter ces états au début du composant
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingMatchId, setEditingMatchId] = useState(null);
 
   // Sort by rank value
   opponentRankStats.sort((a, b) => getRankValue(a.name) - getRankValue(b.name));
@@ -376,6 +413,7 @@ export default function Tekken8StatsTracker() {
             handleFilterChange={handleFilterChange}
             filteredMatches={filteredMatches}
             deleteMatch={deleteMatch}
+            editMatch={editMatch}
             tekkenCharacters={tekkenCharacters}
             tekkenStages={tekkenStages}
             tekkenRanks={tekkenRanks}
