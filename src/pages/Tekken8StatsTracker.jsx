@@ -352,6 +352,120 @@ export default function Tekken8StatsTracker() {
   // Sort by rank value
   opponentRankStats.sort((a, b) => getRankValue(a.name) - getRankValue(b.name));
 
+  // Fonction pour déterminer les titres du joueur
+  const determinePlayerTitles = () => {
+    // Prendre les 20 derniers matchs (ou moins s'il y en a moins)
+    const recentMatches = [...filteredMatches].slice(-20);
+    const titles = [];
+
+    if (recentMatches.length < 5) return ["Débutant"]; // Titre par défaut si peu de matchs
+
+    // Calculer les statistiques
+    const recentWins = recentMatches.filter(
+      (match) => match.result === "win"
+    ).length;
+    const recentWinRate = Math.round((recentWins / recentMatches.length) * 100);
+
+    // Compter les différents scores
+    const scoreCounts = {};
+    recentMatches.forEach((match) => {
+      if (!scoreCounts[match.score]) scoreCounts[match.score] = 0;
+      scoreCounts[match.score]++;
+    });
+
+    // Titres basés sur le winrate
+    if (recentWinRate >= 90) titles.push("Légende Vivante");
+    else if (recentWinRate >= 80) titles.push("Champion Implacable");
+    else if (recentWinRate >= 70) titles.push("Ascension Fulgurante");
+    else if (recentWinRate >= 60) titles.push("Combattant Prometteur");
+    else if (recentWinRate <= 20) titles.push("Apprenti en Difficulté");
+
+    // Titres basés sur les scores
+    const threeZeroCount = scoreCounts["3-0"] || 0;
+    const threeTwoCount = scoreCounts["3-2"] || 0;
+    const zeroThreeCount = scoreCounts["0-3"] || 0;
+
+    if (threeZeroCount >= 8) titles.push("As de la Blitzkrieg");
+    if (threeTwoCount >= 8) titles.push("Maître des Fins Serrées");
+    if (zeroThreeCount >= 8) titles.push("Persévérant Sous Pression");
+
+    // Titres basés sur la consistance
+    const hasWinStreak = checkForWinStreak(recentMatches, 5);
+    const hasLoseStreak = checkForLoseStreak(recentMatches, 5);
+
+    if (hasWinStreak) titles.push("Sur une Lancée Victorieuse");
+    if (hasLoseStreak) titles.push("Chercheur de Renouveau");
+
+    // Titres basés sur la difficulté moyenne des adversaires
+    const avgDiff =
+      recentMatches.reduce(
+        (sum, match) => sum + parseInt(match.difficulty),
+        0
+      ) / recentMatches.length;
+
+    if (avgDiff >= 4 && recentWinRate >= 60) titles.push("Dompteur d'Élite");
+
+    // Nouveaux titres basés sur le rang des adversaires
+    const lowRankOpponents = recentMatches.filter(
+      (match) => parseInt(match.opponentRank) <= 2
+    );
+
+    const lowRankWins = lowRankOpponents.filter(
+      (match) => match.result === "win"
+    );
+
+    const lowRankLosses = lowRankOpponents.filter(
+      (match) => match.result === "loss"
+    );
+
+    // Si au moins 30% des matchs sont contre des bas rangs et qu'on les gagne majoritairement
+    if (
+      lowRankOpponents.length >= recentMatches.length * 0.3 &&
+      lowRankWins.length > lowRankLosses.length
+    ) {
+      titles.push("Farmeur de Noobs");
+    }
+
+    // Si au moins 30% des matchs sont contre des bas rangs et qu'on les perd majoritairement
+    if (
+      lowRankOpponents.length >= recentMatches.length * 0.3 &&
+      lowRankWins.length < lowRankLosses.length
+    ) {
+      titles.push("Présomptueux");
+    }
+
+    return titles.length > 0 ? titles : ["Combattant Standard"];
+  };
+
+  // Fonction auxiliaire pour vérifier les séries de victoires consécutives
+  const checkForWinStreak = (matches, streakLength) => {
+    if (matches.length < streakLength) return false;
+    let currentStreak = 0;
+    for (let i = matches.length - 1; i >= 0; i--) {
+      if (matches[i].result === "win") {
+        currentStreak++;
+        if (currentStreak >= streakLength) return true;
+      } else {
+        currentStreak = 0;
+      }
+    }
+    return false;
+  };
+
+  // Fonction auxiliaire pour vérifier les séries de défaites consécutives
+  const checkForLoseStreak = (matches, streakLength) => {
+    if (matches.length < streakLength) return false;
+    let currentStreak = 0;
+    for (let i = matches.length - 1; i >= 0; i--) {
+      if (matches[i].result === "loss") {
+        currentStreak++;
+        if (currentStreak >= streakLength) return true;
+      } else {
+        currentStreak = 0;
+      }
+    }
+    return false;
+  };
   return (
     <div>
       {/* Header */}
@@ -374,6 +488,7 @@ export default function Tekken8StatsTracker() {
             mostPlayed={mostPlayed}
             avgOpponentRank={avgOpponentRank}
             rankProgressionData={rankProgressionData}
+            playerTitles={determinePlayerTitles()}
           />
         )}
 

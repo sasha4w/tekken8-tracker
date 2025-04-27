@@ -39,7 +39,9 @@ header {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
   margin-bottom: 2rem;
 }
-
+.header-logo {
+  max-width: 380px;
+}
 .container {
   width: 90%;
   max-width: 1200px;
@@ -280,7 +282,49 @@ button[type="submit"]:hover {
   border: 1px dashed var(--border);
   border-radius: 8px;
 }
+/* Conteneur des titres */
+.titles-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
 
+/* Style des titres individuels */
+.player-title {
+  background: linear-gradient(to right, #660000, #cc0000);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  display: inline-block;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 1px solid #ff3333;
+  position: relative;
+}
+
+/* Animation de brillance sur hover */
+.player-title:hover {
+  background: linear-gradient(to right, #800000, #ff0000);
+  transform: translateY(-2px);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 8px rgba(255, 0, 0, 0.3);
+}
+
+/* Style spécial pour certains titres prestigieux */
+.player-title:nth-child(1) {
+  background: linear-gradient(to right, #990000, #ff3333);
+  font-weight: 700;
+}
+
+/* Media queries pour responsive */
+@media (max-width: 768px) {
+  .titles-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
 /* Table */
 table {
   width: 100%;

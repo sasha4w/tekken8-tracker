@@ -13,10 +13,11 @@ export default function ProfileTab({
   mostPlayed,
   avgOpponentRank,
   rankProgressionData,
+  playerTitles,
+  updateUserProfile,
 }) {
   return (
     <div>
-      {/* Partie Profil + Stats générales */}
       <ProfileSection
         userProfile={userProfile}
         rankProgressionData={rankProgressionData}
@@ -25,9 +26,10 @@ export default function ProfileTab({
         matches={matches}
         mostPlayed={mostPlayed}
         avgOpponentRank={avgOpponentRank}
+        playerTitles={playerTitles}
+        updateUserProfile={updateUserProfile}
       />
 
-      {/* Formulaire Modification Profil */}
       <div className="card" style={{ marginTop: "1.5rem" }}>
         <h2>Modifier mon profil</h2>
         <form onSubmit={handleProfileSubmit}>
@@ -42,7 +44,6 @@ export default function ProfileTab({
                 required
               />
             </div>
-
             <div>
               <label htmlFor="mainCharacter">Personnage principal</label>
               <select
@@ -59,7 +60,6 @@ export default function ProfileTab({
                 ))}
               </select>
             </div>
-
             <div>
               <label htmlFor="currentRank">Rang actuel</label>
               <select
@@ -77,14 +77,12 @@ export default function ProfileTab({
               </select>
             </div>
           </div>
-
           <div style={{ marginTop: "1.5rem" }}>
             <button type="submit">METTRE À JOUR LE PROFIL</button>
           </div>
         </form>
       </div>
 
-      {/* Historique des Rangs */}
       <div className="card" style={{ marginTop: "1.5rem" }}>
         <h2>Historique des rangs</h2>
         <div style={{ overflowX: "auto" }}>
