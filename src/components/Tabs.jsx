@@ -35,6 +35,14 @@ export default function Tabs({ activeTab, setActiveTab }) {
         >
           Historique
         </button>
+        <button
+          className={`tab-button ${
+            activeTab === "replays" ? "active" : "inactive"
+          }`}
+          onClick={() => setActiveTab("replays")}
+        >
+          Replays
+        </button>
       </div>
     </div>
   );

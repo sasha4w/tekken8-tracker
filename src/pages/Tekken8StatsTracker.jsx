@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   BarChart,
   Bar,
@@ -20,10 +20,166 @@ import ProfileTab from "../components/ProfileTab";
 import FormTab from "../components/FormTab";
 import StatsTab from "../components/StatsTab";
 import HistoryTab from "../components/HistoryTab";
+import ReplayTab from "../components/ReplayTab";
 import "./tekken-styles.css";
 import tekkenData from "./tekkenData.json";
 
 export default function Tekken8StatsTracker() {
+  //// REPLAY ///
+  // À ajouter dans votre composant Tekken8StatsTracker
+  const [replays, setReplays] = useState([]);
+  const [loadingReplays, setLoadingReplays] = useState(false);
+  const [replaysBefore, setReplaysBefore] = useState(
+    Math.floor(Date.now() / 1000)
+  ); // Timestamp actuel en secondes
+
+  // Fonction pour convertir les données de l'API en format compatible avec votre application
+  const convertReplayToMatch = (replay) => {
+    // Map des IDs de personnages vers les noms (à compléter avec vos données)
+    const characterIdMap = {
+      40: "Jin Kazama",
+      41: "King",
+      // Ajouter tous les autres personnages selon l'API
+    };
+
+    // Map des IDs de rangs vers les noms (à compléter avec vos données)
+    const rankIdMap = {
+      12: "Tekken King",
+      13: "Tekken God",
+      // Ajouter tous les autres rangs selon l'API
+    };
+
+    // Map des IDs de stages vers les noms (à compléter avec vos données)
+    const stageIdMap = {
+      1400: "Urban Square - Night",
+      // Ajouter tous les autres stages selon l'API
+    };
+
+    const winnerPlayer = replay.winner === 1 ? "p1" : "p2";
+    const result = winnerPlayer === "p1" ? "win" : "loss";
+
+    // Calculer le score basé sur les rounds
+    const p1Rounds = replay.p1_rounds;
+    const p2Rounds = replay.p2_rounds;
+    const score =
+      result === "win" ? `${p1Rounds}-${p2Rounds}` : `${p1Rounds}-${p2Rounds}`;
+
+    return {
+      id: `wavu-${replay.battle_id}`,
+      date: new Date(replay.battle_at * 1000).toISOString().split("T")[0],
+      result,
+      score,
+      myCharacter:
+        characterIdMap[replay.p1_chara_id] ||
+        `Character ID: ${replay.p1_chara_id}`,
+      myRank: rankIdMap[replay.p1_rank] || `Rank ID: ${replay.p1_rank}`,
+      opponentCharacter:
+        characterIdMap[replay.p2_chara_id] ||
+        `Character ID: ${replay.p2_chara_id}`,
+      opponentRank: rankIdMap[replay.p2_rank] || `Rank ID: ${replay.p2_rank}`,
+      opponentName: replay.p2_name,
+      stage: stageIdMap[replay.stage_id] || `Stage ID: ${replay.stage_id}`,
+      difficulty: "3", // Par défaut, pourrait être calculé à partir de la différence de rating
+      notes: `Imported from Wavu Wank API. Battle ID: ${replay.battle_id}`,
+      pointsEarned: replay.p1_rating_change.toString(),
+      // Ajouter d'autres champs utiles
+      rawReplayData: replay, // Conserver les données brutes pour référence
+    };
+  };
+
+  // Fonction pour récupérer les replays
+  const fetchReplays = useCallback(
+    async (before = null) => {
+      setLoadingReplays(true);
+      try {
+        const timestamp = before || replaysBefore;
+        const response = await fetch(
+          `https://wank.wavu.wiki/api/replays?before=${timestamp}&_format=json`,
+          {
+            headers: {
+              "Accept-Encoding": "gzip, deflate",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setReplays(data);
+        // Mettre à jour le timestamp pour la prochaine requête
+        if (data.length > 0) {
+          const oldestReplay = data[data.length - 1];
+          setReplaysBefore(oldestReplay.battle_at - 1);
+        }
+
+        return data;
+      } catch (error) {
+        console.error("Erreur lors de la récupération des replays:", error);
+        return [];
+      } finally {
+        setLoadingReplays(false);
+      }
+    },
+    [replaysBefore]
+  );
+
+  // Fonction pour importer des replays dans l'historique des matchs
+  const importReplaysToHistory = (selectedReplays) => {
+    const newMatches = selectedReplays.map(convertReplayToMatch);
+    setMatches((prevMatches) => [...prevMatches, ...newMatches]);
+    alert(`${newMatches.length} matchs importés avec succès!`);
+  };
+
+  // Ajoutez un nouvel onglet "Replays" dans votre système d'onglets
+  // et créez un composant ReplayTab pour afficher et importer les replays
+
+  //// REPLAY ////
+
+  //// MAPPING DES ID API
+  // À ajouter dans ton composant principal
+
+  // Créer des mappings pour convertir les IDs en noms
+  const createCharacterIdMapping = () => {
+    const mapping = {};
+    // Voici quelques exemples, tu devras compléter selon les données exactes de l'API
+    mapping[40] = "Jin Kazama";
+    mapping[41] = "King";
+    mapping[38] = "Kazuya Mishima";
+    mapping[42] = "Lars Alexandersson";
+    mapping[43] = "Lee Chaolan";
+    mapping[44] = "Leo";
+    mapping[45] = "Lili";
+    // etc.
+    return mapping;
+  };
+
+  const createRankIdMapping = () => {
+    const mapping = {};
+    mapping[1] = "1st Dan";
+    mapping[2] = "2nd Dan";
+    // ...
+    mapping[12] = "Tekken King";
+    mapping[13] = "Tekken God";
+    // etc.
+    return mapping;
+  };
+
+  const createStageIdMapping = () => {
+    const mapping = {};
+    mapping[1400] = "Urban Square - Night";
+    mapping[1401] = "Rebel Hangar";
+    // etc.
+    return mapping;
+  };
+
+  // Initialiser les mappings
+  const charactersIdMapping = createCharacterIdMapping();
+  const ranksIdMapping = createRankIdMapping();
+  const stagesIdMapping = createStageIdMapping();
+
+  ////////////////////////
   const [matches, setMatches] = useState(() => {
     const savedMatches = localStorage.getItem("tekken8Matches");
     return savedMatches ? JSON.parse(savedMatches) : [];
@@ -533,6 +689,17 @@ export default function Tekken8StatsTracker() {
             tekkenCharacters={tekkenCharacters}
             tekkenStages={tekkenStages}
             tekkenRanks={tekkenRanks}
+          />
+        )}
+        {activeTab === "replays" && (
+          <ReplayTab
+            replays={replays}
+            loadingReplays={loadingReplays}
+            fetchReplays={fetchReplays}
+            importReplaysToHistory={importReplaysToHistory}
+            characterIdMap={charactersIdMapping}
+            rankIdMap={ranksIdMapping}
+            stageIdMap={stagesIdMapping}
           />
         )}
       </div>
