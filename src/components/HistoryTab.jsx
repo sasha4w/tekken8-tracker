@@ -1,46 +1,49 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { battleTypeLabel, DEFAULT_BATTLE_TYPE } from "../services/ewgfApi";
+
+const PAR_PAGE = 50;
+
+// L'identifiant porte l'horodatage exact (tk-<secondes>-<adversaire>), plus
+// précis que la date du match, qui ne descend pas sous la journée.
+const matchTime = (match) => {
+  const parsed = String(match.id).match(/^tk-(\d+)-/);
+  return parsed ? Number(parsed[1]) : Date.parse(match.date) / 1000 || 0;
+};
+
+const formatPoints = (points) => {
+  const value = Number(points);
+  if (!value) return "";
+  return value > 0 ? `+${value}` : `${value}`;
+};
+
+const pointsClass = (points) =>
+  Number(points) > 0 ? "points-gain" : Number(points) < 0 ? "points-loss" : "";
 
 export default function HistoryTab({
   filters,
   handleFilterChange,
   filteredMatches,
-  deleteMatch,
+  battleTypes,
+  resetFilters,
   tekkenCharacters,
   tekkenStages,
   tekkenRanks,
-  editMatch,
 }) {
-  const [selectedMatches, setSelectedMatches] = useState([]);
-  const [hoveredRowId, setHoveredRowId] = useState(null);
+  const [page, setPage] = useState(1);
 
-  const toggleMatchSelection = (matchId) => {
-    setSelectedMatches(
-      selectedMatches.includes(matchId)
-        ? selectedMatches.filter((id) => id !== matchId)
-        : [...selectedMatches, matchId]
-    );
-  };
+  const sortedMatches = [...filteredMatches].sort(
+    (a, b) => matchTime(b) - matchTime(a)
+  );
+  const pageCount = Math.max(1, Math.ceil(sortedMatches.length / PAR_PAGE));
+  const matchesOnPage = sortedMatches.slice(
+    (page - 1) * PAR_PAGE,
+    page * PAR_PAGE
+  );
 
-  const toggleSelectAll = () => {
-    setSelectedMatches(
-      selectedMatches.length === filteredMatches.length
-        ? []
-        : filteredMatches.map((match) => match.id)
-    );
-  };
-
-  const deleteSelectedMatches = () => {
-    if (selectedMatches.length === 0) return;
-
-    if (
-      confirm(
-        `Êtes-vous sûr de vouloir supprimer ${selectedMatches.length} match(s) ?`
-      )
-    ) {
-      selectedMatches.forEach((id) => deleteMatch(id, false));
-      setSelectedMatches([]);
-    }
-  };
+  // Changer un filtre réduit la liste : rester page 7 afficherait du vide.
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
 
   return (
     <div className="history-card">
@@ -165,49 +168,28 @@ export default function HistoryTab({
                 <option value="loss">Défaites</option>
               </select>
             </div>
+
+            <div className="filter-item">
+              <label htmlFor="filter-battleType">
+                <span className="filter-icon">⚔️</span> Type de match
+              </label>
+              <select
+                id="filter-battleType"
+                value={filters.battleType}
+                onChange={handleFilterChange}
+                className="filter-select"
+              >
+                <option value="">Tous</option>
+                {battleTypes.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Actions en masse */}
-      {filteredMatches.length > 0 && (
-        <div className="bulk-actions">
-          <div className="select-all-container">
-            <input
-              type="checkbox"
-              id="select-all"
-              checked={
-                selectedMatches.length === filteredMatches.length &&
-                filteredMatches.length > 0
-              }
-              onChange={toggleSelectAll}
-              className="checkbox"
-            />
-            <label htmlFor="select-all">Tout sélectionner</label>
-          </div>
-
-          {selectedMatches.length > 0 && (
-            <button
-              onClick={deleteSelectedMatches}
-              className="delete-multiple-button"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="delete-icon"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Supprimer ({selectedMatches.length})
-            </button>
-          )}
-        </div>
-      )}
 
       {/* Table avec design amélioré */}
       <div className="table-container">
@@ -215,43 +197,33 @@ export default function HistoryTab({
           <table className="match-history-table">
             <thead>
               <tr className="table-header">
-                <th className="table-cell cell-checkbox"></th>
                 <th className="table-cell">Date</th>
+                <th className="table-cell">Type</th>
                 <th className="table-cell">Résultat</th>
                 <th className="table-cell">Score</th>
-                <th className="table-cell">Mon personnage</th>
+                <th className="table-cell">Mon perso</th>
                 <th className="table-cell">Mon rang</th>
-                <th className="table-cell">Perso adverse</th>
-                <th className="table-cell">Rang adverse</th>
+                <th className="table-cell">Perso adv.</th>
+                <th className="table-cell">Rang adv.</th>
                 <th className="table-cell">Terrain</th>
                 <th className="table-cell">Adversaire</th>
-                <th className="table-cell">Difficulté</th>
-                <th className="table-cell">Notes</th>
-                <th className="table-cell">Actions</th>
+                <th className="table-cell">Points</th>
               </tr>
             </thead>
             <tbody>
-              {filteredMatches
-                .slice()
-                .reverse()
-                .map((match) => (
+              {matchesOnPage.map((match) => (
                   <tr
                     key={match.id}
                     className={`table-row ${
                       match.result === "win" ? "win-row" : "loss-row"
                     }`}
-                    onMouseEnter={() => setHoveredRowId(match.id)}
-                    onMouseLeave={() => setHoveredRowId(null)}
                   >
-                    <td className="table-cell cell-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={selectedMatches.includes(match.id)}
-                        onChange={() => toggleMatchSelection(match.id)}
-                        className="checkbox"
-                      />
-                    </td>
                     <td className="table-cell">{match.date}</td>
+                    <td className="table-cell table-cell-center">
+                      <span className="battle-type-badge">
+                        {battleTypeLabel(match.battleType || DEFAULT_BATTLE_TYPE)}
+                      </span>
+                    </td>
                     <td className="table-cell">
                       <span
                         className={
@@ -270,7 +242,7 @@ export default function HistoryTab({
                       </div>
                     </td>
                     <td className="table-cell table-cell-center">
-                      {match.myRank || "-"}
+                      {match.myRank}
                     </td>
                     <td className="table-cell">
                       <div className="char-container">
@@ -280,70 +252,14 @@ export default function HistoryTab({
                       </div>
                     </td>
                     <td className="table-cell table-cell-center">
-                      {match.opponentRank || "-"}
+                      {match.opponentRank}
                     </td>
-                    <td className="table-cell">{match.stage || "-"}</td>
-                    <td className="table-cell">{match.opponentName || "-"}</td>
+                    <td className="table-cell">{match.stage}</td>
+                    <td className="table-cell">{match.opponentName}</td>
                     <td className="table-cell table-cell-center">
-                      <div
-                        className={`difficulty-badge difficulty-${
-                          match.difficulty || 0
-                        }`}
-                      >
-                        {match.difficulty || "-"}
-                      </div>
-                    </td>
-                    <td className="table-cell notes-cell">
-                      {match.notes ? (
-                        <div className="notes-tooltip" title={match.notes}>
-                          <span className="notes-preview">
-                            {match.notes.length > 25
-                              ? match.notes.substring(0, 25) + "..."
-                              : match.notes}
-                          </span>
-                          {match.notes.length > 25 && (
-                            <div className="tooltip-content">{match.notes}</div>
-                          )}
-                        </div>
-                      ) : (
-                        "-"
-                      )}
-                    </td>
-                    <td className="table-cell action-cell">
-                      <div className="action-buttons">
-                        <button
-                          onClick={() => editMatch(match.id)}
-                          className="edit-button"
-                          title="Modifier"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="action-icon"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => deleteMatch(match.id)}
-                          className="delete-button"
-                          title="Supprimer"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="action-icon"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </button>
-                      </div>
+                      <span className={pointsClass(match.pointsEarned)}>
+                        {formatPoints(match.pointsEarned)}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -355,18 +271,37 @@ export default function HistoryTab({
             <p>Aucun match trouvé avec les filtres actuels</p>
             <button
               className="reset-filters-button"
-              onClick={() => {
-                // Ajouter la logique pour réinitialiser les filtres
-                handleFilterChange({
-                  target: { id: "reset-filters", value: "" },
-                });
-              }}
+              onClick={resetFilters}
             >
               Réinitialiser les filtres
             </button>
           </div>
         )}
       </div>
+
+      {pageCount > 1 && (
+        <div className="pagination">
+          <button
+            className="pagination-button"
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            disabled={page === 1}
+          >
+            Précédent
+          </button>
+          <span className="pagination-status">
+            Page {page} sur {pageCount}
+          </span>
+          <button
+            className="pagination-button"
+            onClick={() =>
+              setPage((current) => Math.min(pageCount, current + 1))
+            }
+            disabled={page === pageCount}
+          >
+            Suivant
+          </button>
+        </div>
+      )}
     </div>
   );
 }

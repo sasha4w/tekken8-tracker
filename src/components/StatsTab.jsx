@@ -16,6 +16,7 @@ import ActivityHeatmap from "./ActivityHeatmap";
 export default function StatsTab({
   filters,
   handleFilterChange,
+  battleTypes,
   filteredMatches,
   winRate,
   mostPlayed,
@@ -181,6 +182,22 @@ export default function StatsTab({
               {tekkenRanks.map((rank) => (
                 <option key={rank} value={rank}>
                   {rank}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="filter-battleType">Type de match</label>
+            <select
+              id="filter-battleType"
+              value={filters.battleType}
+              onChange={handleFilterChange}
+            >
+              <option value="">Tous</option>
+              {battleTypes.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
                 </option>
               ))}
             </select>

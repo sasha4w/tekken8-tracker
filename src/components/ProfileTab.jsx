@@ -1,5 +1,43 @@
 import React from "react";
+import { RefreshCw } from "lucide-react";
 import ProfileSection from "./ProfileSection";
+
+// Décrit l'état de la dernière synchronisation avec ewgf.gg et Wavu Wank.
+function SyncBanner({ tekkenId, syncState, onRefresh }) {
+  const { loading, errors = [], lastSyncAt, added, enriched } = syncState;
+
+  const message = () => {
+    if (!tekkenId)
+      return "Renseigne ton Tekken ID ci-dessous pour importer tes matchs.";
+    if (loading) return "Chargement de tes matchs...";
+    if (!lastSyncAt) return errors.join(" ") || "Pas encore synchronisé.";
+
+    const bilan = [];
+    if (added > 0) bilan.push(`${added} nouveau(x) match(es)`);
+    if (enriched > 0) bilan.push(`${enriched} complété(s)`);
+    if (bilan.length === 0) bilan.push("Aucun nouveau match");
+
+    const heure = new Date(lastSyncAt).toLocaleTimeString();
+    return [bilan.join(", "), ...errors, `dernière synchro à ${heure}`].join(
+      " — "
+    );
+  };
+
+  return (
+    <div className={`sync-banner${errors.length ? " sync-banner-error" : ""}`}>
+      <span>{message()}</span>
+      <button
+        type="button"
+        className="sync-refresh-button"
+        onClick={onRefresh}
+        disabled={loading || !tekkenId}
+      >
+        <RefreshCw className={loading ? "animate-spin" : ""} size={16} />
+        Actualiser
+      </button>
+    </div>
+  );
+}
 
 export default function ProfileTab({
   userProfile,
@@ -15,9 +53,17 @@ export default function ProfileTab({
   rankProgressionData,
   playerTitles,
   updateUserProfile,
+  syncState,
+  onRefresh,
 }) {
   return (
     <div>
+      <SyncBanner
+        tekkenId={userProfile.tekkenId}
+        syncState={syncState}
+        onRefresh={onRefresh}
+      />
+
       <ProfileSection
         userProfile={userProfile}
         rankProgressionData={rankProgressionData}
@@ -43,6 +89,17 @@ export default function ProfileTab({
                 onChange={handleProfileInputChange}
                 required
               />
+            </div>
+            <div>
+              <label htmlFor="tekkenId">Tekken ID</label>
+              <input
+                type="text"
+                id="tekkenId"
+                value={profileForm.tekkenId}
+                onChange={handleProfileInputChange}
+                placeholder="ex : 5dgF8GbjAQjj"
+              />
+              <small>Sert à importer tes matchs depuis ewgf.gg</small>
             </div>
             <div>
               <label htmlFor="mainCharacter">Personnage principal</label>

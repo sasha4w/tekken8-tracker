@@ -17,203 +17,159 @@ import Header from "./../components/Header";
 import Footer from "./../components/Footer";
 import Tabs from "./../components/Tabs";
 import ProfileTab from "../components/ProfileTab";
-import FormTab from "../components/FormTab";
 import StatsTab from "../components/StatsTab";
 import HistoryTab from "../components/HistoryTab";
-import ReplayTab from "../components/ReplayTab";
 import "./tekken-styles.css";
 import tekkenData from "./tekkenData.json";
+import {
+  battleToMatch,
+  battleTypes,
+  DEFAULT_BATTLE_TYPE,
+  fetchBattles as fetchBattlesFromApi,
+  latestRank,
+} from "../services/ewgfApi";
+import { fetchPlayerMatches, wavuRowToMatch } from "../services/wavuApi";
+import { migrateMatchIds } from "../services/matchIdentity";
 
-export default function Tekken8StatsTracker() {
-  //// REPLAY ///
-  // À ajouter dans votre composant Tekken8StatsTracker
-  const [replays, setReplays] = useState([]);
-  const [loadingReplays, setLoadingReplays] = useState(false);
-  const [replaysBefore, setReplaysBefore] = useState(
-    Math.floor(Date.now() / 1000)
-  ); // Timestamp actuel en secondes
-
-  // Fonction pour convertir les données de l'API en format compatible avec votre application
-  const convertReplayToMatch = (replay) => {
-    // Map des IDs de personnages vers les noms (à compléter avec vos données)
-    const characterIdMap = {
-      40: "Jin Kazama",
-      41: "King",
-      // Ajouter tous les autres personnages selon l'API
-    };
-
-    // Map des IDs de rangs vers les noms (à compléter avec vos données)
-    const rankIdMap = {
-      12: "Tekken King",
-      13: "Tekken God",
-      // Ajouter tous les autres rangs selon l'API
-    };
-
-    // Map des IDs de stages vers les noms (à compléter avec vos données)
-    const stageIdMap = {
-      1400: "Urban Square - Night",
-      // Ajouter tous les autres stages selon l'API
-    };
-
-    const winnerPlayer = replay.winner === 1 ? "p1" : "p2";
-    const result = winnerPlayer === "p1" ? "win" : "loss";
-
-    // Calculer le score basé sur les rounds
-    const p1Rounds = replay.p1_rounds;
-    const p2Rounds = replay.p2_rounds;
-    const score =
-      result === "win" ? `${p1Rounds}-${p2Rounds}` : `${p1Rounds}-${p2Rounds}`;
-
-    return {
-      id: `wavu-${replay.battle_id}`,
-      date: new Date(replay.battle_at * 1000).toISOString().split("T")[0],
-      result,
-      score,
-      myCharacter:
-        characterIdMap[replay.p1_chara_id] ||
-        `Character ID: ${replay.p1_chara_id}`,
-      myRank: rankIdMap[replay.p1_rank] || `Rank ID: ${replay.p1_rank}`,
-      opponentCharacter:
-        characterIdMap[replay.p2_chara_id] ||
-        `Character ID: ${replay.p2_chara_id}`,
-      opponentRank: rankIdMap[replay.p2_rank] || `Rank ID: ${replay.p2_rank}`,
-      opponentName: replay.p2_name,
-      stage: stageIdMap[replay.stage_id] || `Stage ID: ${replay.stage_id}`,
-      difficulty: "3", // Par défaut, pourrait être calculé à partir de la différence de rating
-      notes: `Imported from Wavu Wank API. Battle ID: ${replay.battle_id}`,
-      pointsEarned: replay.p1_rating_change.toString(),
-      // Ajouter d'autres champs utiles
-      rawReplayData: replay, // Conserver les données brutes pour référence
-    };
-  };
-
-  // Fonction pour récupérer les replays
-  const fetchReplays = useCallback(
-    async (before = null) => {
-      setLoadingReplays(true);
-      try {
-        const timestamp = before || replaysBefore;
-        const response = await fetch(
-          `https://wank.wavu.wiki/api/replays?before=${timestamp}&_format=json`,
-          {
-            headers: {
-              "Accept-Encoding": "gzip, deflate",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        setReplays(data);
-        // Mettre à jour le timestamp pour la prochaine requête
-        if (data.length > 0) {
-          const oldestReplay = data[data.length - 1];
-          setReplaysBefore(oldestReplay.battle_at - 1);
-        }
-
-        return data;
-      } catch (error) {
-        console.error("Erreur lors de la récupération des replays:", error);
-        return [];
-      } finally {
-        setLoadingReplays(false);
-      }
-    },
-    [replaysBefore]
+// Ce qu'une source peut apporter à un match déjà connu. On écarte les champs
+// posés une fois pour toutes à la création (notes, difficulté), les valeurs
+// vides, et le "0 point" d'ewgf.gg, qui effacerait les vrais points de Wavu.
+const meaningfulFields = (match) =>
+  Object.fromEntries(
+    Object.entries(match).filter(
+      ([field, value]) =>
+        !["notes", "difficulty"].includes(field) &&
+        value !== "" &&
+        value !== undefined &&
+        !(field === "pointsEarned" && value === "0")
+    )
   );
 
-  // Fonction pour importer des replays dans l'historique des matchs
-  const importReplaysToHistory = (selectedReplays) => {
-    const newMatches = selectedReplays.map(convertReplayToMatch);
-    setMatches((prevMatches) => [...prevMatches, ...newMatches]);
-    alert(`${newMatches.length} matchs importés avec succès!`);
-  };
+const loadProfile = () => {
+  const saved = localStorage.getItem("tekken8Profile");
+  return saved
+    ? JSON.parse(saved)
+    : {
+        username: "",
+        tekkenId: "",
+        mainCharacter: "",
+        currentRank: "",
+        rankHistory: [],
+      };
+};
 
-  // Ajoutez un nouvel onglet "Replays" dans votre système d'onglets
-  // et créez un composant ReplayTab pour afficher et importer les replays
+export default function Tekken8StatsTracker() {
+  const [userProfile, setUserProfile] = useState(loadProfile);
 
-  //// REPLAY ////
-
-  //// MAPPING DES ID API
-  // À ajouter dans ton composant principal
-
-  // Créer des mappings pour convertir les IDs en noms
-  const createCharacterIdMapping = () => {
-    const mapping = {};
-    // Voici quelques exemples, tu devras compléter selon les données exactes de l'API
-    mapping[40] = "Jin Kazama";
-    mapping[41] = "King";
-    mapping[38] = "Kazuya Mishima";
-    mapping[42] = "Lars Alexandersson";
-    mapping[43] = "Lee Chaolan";
-    mapping[44] = "Leo";
-    mapping[45] = "Lili";
-    // etc.
-    return mapping;
-  };
-
-  const createRankIdMapping = () => {
-    const mapping = {};
-    mapping[1] = "1st Dan";
-    mapping[2] = "2nd Dan";
-    // ...
-    mapping[12] = "Tekken King";
-    mapping[13] = "Tekken God";
-    // etc.
-    return mapping;
-  };
-
-  const createStageIdMapping = () => {
-    const mapping = {};
-    mapping[1400] = "Urban Square - Night";
-    mapping[1401] = "Rebel Hangar";
-    // etc.
-    return mapping;
-  };
-
-  // Initialiser les mappings
-  const charactersIdMapping = createCharacterIdMapping();
-  const ranksIdMapping = createRankIdMapping();
-  const stagesIdMapping = createStageIdMapping();
-
-  ////////////////////////
   const [matches, setMatches] = useState(() => {
     const savedMatches = localStorage.getItem("tekken8Matches");
-    return savedMatches ? JSON.parse(savedMatches) : [];
+    // Les matchs importés avant Wavu portent un identifiant propre à ewgf.gg.
+    return migrateMatchIds(
+      savedMatches ? JSON.parse(savedMatches) : [],
+      loadProfile().tekkenId
+    );
   });
 
-  const [userProfile, setUserProfile] = useState(() => {
-    const savedProfile = localStorage.getItem("tekken8Profile");
-    return savedProfile
-      ? JSON.parse(savedProfile)
-      : {
-          username: "",
-          mainCharacter: "",
-          currentRank: "",
-          rankHistory: [],
-        };
+  //// SYNCHRONISATION AVEC EWGF.GG ET WAVU WANK ////
+  const [syncState, setSyncState] = useState({
+    loading: false,
+    errors: [],
+    lastSyncAt: null,
+    added: null,
+    enriched: null,
   });
 
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split("T")[0],
-    result: "win",
-    score: "3-0",
-    myCharacter: userProfile.mainCharacter || "", // Préremplir avec le perso principal
-    myRank: userProfile.currentRank || "",
-    opponentCharacter: "",
-    opponentRank: "",
-    opponentName: "",
-    stage: "",
-    difficulty: "3",
-    notes: "",
-    pointsEarned: "0", // Nouveau champ
-  });
+  const syncMatches = useCallback(async () => {
+    if (!userProfile.tekkenId) return;
+
+    setSyncState((prev) => ({ ...prev, loading: true, errors: [] }));
+
+    // Les deux sources sont indépendantes : l'une peut échouer sans l'autre.
+    const [wavu, ewgf] = await Promise.allSettled([
+      fetchPlayerMatches(userProfile.tekkenId),
+      fetchBattlesFromApi(userProfile.tekkenId),
+    ]);
+
+    const errors = [];
+    if (wavu.status === "rejected") errors.push(wavu.reason.message);
+    if (ewgf.status === "rejected") errors.push(ewgf.reason.message);
+
+    // Wavu pose le socle (historique long et points), ewgf complète par-dessus
+    // avec ce qu'il est seul à connaître : rang, stage et type de match.
+    const layers = [
+      wavu.status === "fulfilled" ? wavu.value.map(wavuRowToMatch) : [],
+      ewgf.status === "fulfilled"
+        ? ewgf.value.map((battle) => battleToMatch(battle, userProfile.tekkenId))
+        : [],
+    ];
+
+    let added = 0;
+    let enriched = 0;
+
+    // La fusion se fait dans la mise à jour d'état : deux synchros simultanées
+    // (StrictMode en développement) ne peuvent pas créer de doublons.
+    setMatches((prev) => {
+      added = 0;
+      enriched = 0;
+      const byId = new Map(prev.map((match) => [match.id, match]));
+
+      layers.flat().forEach((incoming) => {
+        const existing = byId.get(incoming.id);
+        if (!existing) {
+          byId.set(incoming.id, { difficulty: "3", pointsEarned: "0", ...incoming });
+          added++;
+          return;
+        }
+
+        const merged = { ...existing, ...meaningfulFields(incoming) };
+        if (JSON.stringify(merged) !== JSON.stringify(existing)) {
+          byId.set(incoming.id, merged);
+          enriched++;
+        }
+      });
+
+      return added || enriched ? [...byId.values()] : prev;
+    });
+
+    // Le rang du dernier match fait foi, et alimente la courbe de progression.
+    const current =
+      ewgf.status === "fulfilled"
+        ? latestRank(ewgf.value, userProfile.tekkenId)
+        : null;
+    if (current) {
+      setUserProfile((prev) =>
+        prev.currentRank === current.rank
+          ? prev
+          : {
+              ...prev,
+              currentRank: current.rank,
+              rankHistory: [
+                ...prev.rankHistory,
+                { date: current.date, rank: current.rank },
+              ],
+            }
+      );
+    }
+
+    setSyncState({
+      loading: false,
+      errors,
+      lastSyncAt: new Date().toISOString(),
+      added,
+      enriched,
+    });
+  }, [userProfile.tekkenId]);
+
+  // Une synchro au chargement de l'app, et une autre si le Tekken ID change.
+  // Volontairement hors de l'onglet Profil : y revenir ne doit pas consommer
+  // le quota de 100 requêtes par heure.
+  useEffect(() => {
+    syncMatches();
+  }, [syncMatches]);
 
   const [profileForm, setProfileForm] = useState({
     username: userProfile.username || "",
+    tekkenId: userProfile.tekkenId || "",
     mainCharacter: userProfile.mainCharacter || "",
     currentRank: userProfile.currentRank || "",
   });
@@ -224,29 +180,13 @@ export default function Tekken8StatsTracker() {
     opponentName: "",
     stage: "",
     opponentRank: "",
+    battleType: DEFAULT_BATTLE_TYPE,
   });
 
-  const [activeTab, setActiveTab] = useState("form");
+  const [activeTab, setActiveTab] = useState("profile");
 
   // Utiliser les données du JSON importé
   const { tekkenCharacters, tekkenStages, tekkenRanks } = tekkenData;
-
-  // Scores disponibles en fonction du résultat
-  const getAvailableScores = () => {
-    if (formData.result === "win") {
-      return [
-        { value: "3-0", label: "3-0" },
-        { value: "3-1", label: "3-1" },
-        { value: "3-2", label: "3-2" },
-      ];
-    } else {
-      return [
-        { value: "2-3", label: "2-3" },
-        { value: "1-3", label: "1-3" },
-        { value: "0-3", label: "0-3" },
-      ];
-    }
-  };
 
   useEffect(() => {
     localStorage.setItem("tekken8Matches", JSON.stringify(matches));
@@ -254,22 +194,7 @@ export default function Tekken8StatsTracker() {
 
   useEffect(() => {
     localStorage.setItem("tekken8Profile", JSON.stringify(userProfile));
-    // Mettre à jour le rank par défaut dans le formulaire quand le profil change
-    setFormData((prev) => ({ ...prev, myRank: userProfile.currentRank }));
   }, [userProfile]);
-
-  // Réinitialiser le score lorsque le résultat change
-  useEffect(() => {
-    const scores = getAvailableScores();
-    if (scores.length > 0 && !scores.some((s) => s.value === formData.score)) {
-      setFormData((prev) => ({ ...prev, score: scores[0].value }));
-    }
-  }, [formData.result]);
-
-  const handleInputChange = (e) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
-  };
 
   const handleProfileInputChange = (e) => {
     const { id, value } = e.target;
@@ -281,36 +206,18 @@ export default function Tekken8StatsTracker() {
     setFilters((prev) => ({ ...prev, [id.replace("filter-", "")]: value }));
   };
 
-  // Modifier la fonction handleSubmit pour gérer l'édition
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (isEditing) {
-      // Mode édition - mettre à jour le match existant
-      const updatedMatches = matches.map((match) =>
-        match.id === editingMatchId
-          ? { ...formData, id: editingMatchId }
-          : match
-      );
-      setMatches(updatedMatches);
-
-      // Réinitialiser le mode édition
-      setIsEditing(false);
-      setEditingMatchId(null);
-    } else {
-      // Mode ajout - créer un nouveau match
-      const newMatch = { id: Date.now(), ...formData };
-      setMatches((prev) => [...prev, newMatch]);
-    }
-
-    // Réinitialiser partiellement le formulaire
-    setFormData({
-      ...formData,
-      date: new Date().toISOString().split("T")[0],
+  // Tout remettre à zéro, y compris le type de match, filtré sur Ranked au départ.
+  const resetFilters = () =>
+    setFilters({
+      myCharacter: "",
+      opponentCharacter: "",
       opponentName: "",
-      notes: "",
+      stage: "",
+      opponentRank: "",
+      result: "",
+      battleType: "",
     });
-  };
+
   const handleProfileSubmit = (e) => {
     e.preventDefault();
 
@@ -329,18 +236,13 @@ export default function Tekken8StatsTracker() {
 
     setUserProfile({
       username: profileForm.username,
+      tekkenId: profileForm.tekkenId.trim(),
       mainCharacter: profileForm.mainCharacter,
       currentRank: profileForm.currentRank,
       rankHistory: newRankHistory,
     });
 
     alert("Profil mis à jour avec succès!");
-  };
-
-  const deleteMatch = (id) => {
-    if (confirm("Êtes-vous sûr de vouloir supprimer ce match ?")) {
-      setMatches((prev) => prev.filter((match) => match.id !== id));
-    }
   };
 
   const filteredMatches = matches.filter((match) => {
@@ -355,7 +257,10 @@ export default function Tekken8StatsTracker() {
           .includes(filters.opponentName.toLowerCase())) &&
       (filters.stage === "" || match.stage === filters.stage) &&
       (filters.opponentRank === "" ||
-        match.opponentRank === filters.opponentRank)
+        match.opponentRank === filters.opponentRank) &&
+      // Les matchs saisis à la main, antérieurs à l'import, sont comptés comme Ranked.
+      (filters.battleType === "" ||
+        (match.battleType || DEFAULT_BATTLE_TYPE) === filters.battleType)
     );
   });
 
@@ -484,28 +389,6 @@ export default function Tekken8StatsTracker() {
       });
     }
   });
-  // Ajouter cette fonction dans le composant Tekken8StatsTracker
-  const editMatch = (matchId) => {
-    // Trouver le match à modifier
-    const matchToEdit = matches.find((match) => match.id === matchId);
-
-    if (matchToEdit) {
-      // Mettre à jour le formData avec les données du match
-      setFormData({ ...matchToEdit });
-
-      // Basculer vers l'onglet de formulaire
-      setActiveTab("form");
-
-      // Vous pouvez également ajouter un état pour suivre si nous sommes en mode édition
-      setIsEditing(true);
-      setEditingMatchId(matchId);
-    }
-  };
-
-  // Ajouter ces états au début du composant
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingMatchId, setEditingMatchId] = useState(null);
-
   // Sort by rank value
   opponentRankStats.sort((a, b) => getRankValue(a.name) - getRankValue(b.name));
 
@@ -646,18 +529,8 @@ export default function Tekken8StatsTracker() {
             avgOpponentRank={avgOpponentRank}
             rankProgressionData={rankProgressionData}
             playerTitles={determinePlayerTitles()}
-          />
-        )}
-        {activeTab === "form" && (
-          <FormTab
-            formData={formData}
-            handleInputChange={handleInputChange}
-            handleSubmit={handleSubmit}
-            tekkenCharacters={tekkenCharacters}
-            tekkenRanks={tekkenRanks}
-            tekkenStages={tekkenStages}
-            getAvailableScores={getAvailableScores}
-            userProfile={userProfile} // Nouvelle prop
+            syncState={syncState}
+            onRefresh={syncMatches}
           />
         )}
 
@@ -665,6 +538,7 @@ export default function Tekken8StatsTracker() {
           <StatsTab
             filters={filters}
             handleFilterChange={handleFilterChange}
+            battleTypes={battleTypes}
             filteredMatches={filteredMatches}
             winRate={winRate}
             mostPlayed={mostPlayed}
@@ -684,22 +558,11 @@ export default function Tekken8StatsTracker() {
             filters={filters}
             handleFilterChange={handleFilterChange}
             filteredMatches={filteredMatches}
-            deleteMatch={deleteMatch}
-            editMatch={editMatch}
+            battleTypes={battleTypes}
+            resetFilters={resetFilters}
             tekkenCharacters={tekkenCharacters}
             tekkenStages={tekkenStages}
             tekkenRanks={tekkenRanks}
-          />
-        )}
-        {activeTab === "replays" && (
-          <ReplayTab
-            replays={replays}
-            loadingReplays={loadingReplays}
-            fetchReplays={fetchReplays}
-            importReplaysToHistory={importReplaysToHistory}
-            characterIdMap={charactersIdMapping}
-            rankIdMap={ranksIdMapping}
-            stageIdMap={stagesIdMapping}
           />
         )}
       </div>

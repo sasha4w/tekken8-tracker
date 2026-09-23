@@ -13,14 +13,6 @@ export default function Tabs({ activeTab, setActiveTab }) {
         </button>
         <button
           className={`tab-button ${
-            activeTab === "form" ? "active" : "inactive"
-          }`}
-          onClick={() => setActiveTab("form")}
-        >
-          Ajouter un match
-        </button>
-        <button
-          className={`tab-button ${
             activeTab === "stats" ? "active" : "inactive"
           }`}
           onClick={() => setActiveTab("stats")}
@@ -34,14 +26,6 @@ export default function Tabs({ activeTab, setActiveTab }) {
           onClick={() => setActiveTab("history")}
         >
           Historique
-        </button>
-        <button
-          className={`tab-button ${
-            activeTab === "replays" ? "active" : "inactive"
-          }`}
-          onClick={() => setActiveTab("replays")}
-        >
-          Replays
         </button>
       </div>
     </div>
