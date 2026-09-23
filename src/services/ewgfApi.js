@@ -8,10 +8,35 @@ import { normalizeRank } from "./ranks";
 
 const API_BASE = "/api/ewgf";
 
-// Les stages arrivent sous forme d'ID numériques (100, 1200, ...) et aucune
-// table de correspondance publique n'existe pour ces valeurs. Complète-la au fur
-// et à mesure : tant qu'un ID est absent, le match est importé avec "Stage 1200".
-const stageNames = {};
+// L'ID d'un stage vaut son numéro interne dans le jeu × 100 (st17_Sea -> 1700),
+// +1 pour sa variante (st01_Arena_Battle1 -> 101). Sources : la table du
+// backend d'ewgf.gg pour les stages de base, les fichiers internes listés sur
+// Tekken Warehouse et la date d'apparition de chaque ID dans les replays Wavu
+// pour les stages DLC. Les noms suivent tekkenStages, pour le filtre Terrain.
+const stageNames = {
+  100: "Arena",
+  101: "Arena (Underground)",
+  200: "Urban Square",
+  201: "Urban Square (Evening)",
+  300: "Yakushima",
+  400: "Coliseum of Fate",
+  500: "Rebel Hangar",
+  600: "Pac-Pixels",
+  700: "Fallen Destiny",
+  900: "Descent into Subconscious",
+  1000: "Sanctum",
+  1100: "Into the Stratosphere",
+  1200: "Ortiz Farm",
+  1300: "Celebration on the Seine",
+  1400: "Secluded Training Ground",
+  1500: "Elegant Palace",
+  1600: "Midnight Siege",
+  1700: "Seaside Resort",
+  1800: "Genmaji Temple",
+  1801: "Genmaji Temple (daytime)",
+  1900: "Phoenix Gate",
+  2200: "Baobab Horizon",
+};
 
 const battleTypeLabels = {
   RANKED_BATTLE: "Ranked",
@@ -39,6 +64,16 @@ export class EwgfApiError extends Error {
 }
 
 export const stageName = (stageId) => stageNames[stageId] || `Stage ${stageId}`;
+
+// Les matchs importés avant la table des stages portent « Stage 1200 » :
+// on les renomme, sans quoi seuls les 50 derniers seraient corrigés à la synchro.
+export const migrateStageNames = (matches) =>
+  matches.map((match) => {
+    const parsed = /^Stage (\d+)$/.exec(match.stage || "");
+    return parsed && stageNames[parsed[1]]
+      ? { ...match, stage: stageNames[parsed[1]] }
+      : match;
+  });
 
 export const battleTypeLabel = (battleType) =>
   battleTypeLabels[battleType] || battleType;

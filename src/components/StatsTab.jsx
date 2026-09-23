@@ -10,11 +10,13 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  Cell,
 } from "recharts";
 import ActivityHeatmap from "./ActivityHeatmap";
+import MatchupStats from "./MatchupStats";
 import RankBadge from "./RankBadge";
-import { rankColor } from "../services/ranks";
+import { matchTime } from "../services/matchIdentity";
+
+const MATCHS_TENDANCE = 30;
 
 export default function StatsTab({
   filters,
@@ -24,9 +26,7 @@ export default function StatsTab({
   winRate,
   mostPlayed,
   avgOpponentRank,
-  characterStats,
   stageStats,
-  winRateTrend,
   opponentRankStats,
   tekkenCharacters,
   tekkenStages,
@@ -91,16 +91,18 @@ export default function StatsTab({
 
   const streaks = calculateStreaks();
 
-  // Format winrate trend data to use dates instead of "Match X"
+  // Win rate cumulé sur les derniers matchs. Axe numéroté plutôt que daté :
+  // plusieurs matchs partagent souvent la même journée.
   const formatWinRateTrendData = () => {
     const recentMatches = [...filteredMatches]
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .slice(-10);
+      .sort((a, b) => matchTime(a) - matchTime(b))
+      .slice(-MATCHS_TENDANCE);
 
     let trendWins = 0;
     return recentMatches.map((match, index) => {
       if (match.result === "win") trendWins++;
       return {
+        match: index + 1,
         date: match.date,
         winRate: Math.round((trendWins / (index + 1)) * 100),
       };
@@ -262,20 +264,18 @@ export default function StatsTab({
         </div>
       </div>
 
-      {/* Activity Heatmap */}
-      <ActivityHeatmap matches={filteredMatches} />
+      {/* Calendrier d'activité et tendance du win rate, côte à côte */}
+      <div className="stats-row">
+        <ActivityHeatmap matches={filteredMatches} />
 
-      {/* Graphiques */}
-      <div className="charts-grid">
-        {/* Win Rate Trend */}
         <div className="card">
-          <h2>Tendance Win Rate (10 derniers matchs)</h2>
+          <h2>Tendance Win Rate ({MATCHS_TENDANCE} derniers matchs)</h2>
           <div className="chart-container">
             {winRateTrendData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={winRateTrendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
-                  <XAxis dataKey="date" stroke="#cbd5e0" />
+                  <XAxis dataKey="match" stroke="#cbd5e0" />
                   <YAxis domain={[0, 100]} stroke="#cbd5e0" />
                   <Tooltip
                     contentStyle={{
@@ -283,12 +283,17 @@ export default function StatsTab({
                       border: "1px solid #800000",
                     }}
                     labelStyle={{ color: "#edf2f7" }}
+                    labelFormatter={(n, items) =>
+                      `Match ${n} — ${items?.[0]?.payload?.date ?? ""}`
+                    }
                   />
                   <Line
                     type="monotone"
                     dataKey="winRate"
+                    name="Win rate %"
                     stroke="#ff3333"
                     strokeWidth={2}
+                    dot={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -299,36 +304,10 @@ export default function StatsTab({
             )}
           </div>
         </div>
-
-        {/* Matchup Stats */}
-        <div className="card">
-          <h2>Stats par matchup</h2>
-          <div className="chart-container">
-            {characterStats.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={characterStats.slice(0, 7)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2d3748" />
-                  <XAxis dataKey="name" stroke="#cbd5e0" />
-                  <YAxis domain={[0, 100]} stroke="#cbd5e0" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1a1a1a",
-                      border: "1px solid #800000",
-                    }}
-                    labelStyle={{ color: "#edf2f7" }}
-                  />
-                  <Legend />
-                  <Bar dataKey="winRate" name="Win Rate %" fill="#ff3333" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="empty-chart">
-                Pas assez de données pour afficher les matchups
-              </div>
-            )}
-          </div>
-        </div>
       </div>
+
+      {/* Matchups, sur toute la largeur */}
+      <MatchupStats matches={filteredMatches} />
 
       {/* Stage Stats */}
       <div className="card chart-card">
@@ -377,19 +356,8 @@ export default function StatsTab({
                   }}
                   labelStyle={{ color: "#edf2f7" }}
                 />
-                {/* Légende explicite : les barres de win rate n'ont pas de
-                    couleur unique, elles prennent celle de leur rang. */}
-                <Legend
-                  payload={[
-                    { value: "Win Rate % (couleur du rang)", type: "square", color: "#b69121" },
-                    { value: "Nombre de matchs", type: "square", color: "#33aa33" },
-                  ]}
-                />
-                <Bar dataKey="winRate" name="Win Rate %">
-                  {opponentRankStats.map((entry) => (
-                    <Cell key={entry.name} fill={rankColor(entry.name) || "#ff8c00"} />
-                  ))}
-                </Bar>
+                <Legend />
+                <Bar dataKey="winRate" name="Win Rate %" fill="#ff3333" />
                 <Bar dataKey="matches" name="Nombre de matchs" fill="#33aa33" />
               </BarChart>
             </ResponsiveContainer>

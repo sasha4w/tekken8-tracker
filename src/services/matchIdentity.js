@@ -8,6 +8,14 @@ export const matchKey = (unixSeconds, opponentTekkenId) =>
 export const toUnixSeconds = (isoDate) =>
   Math.floor(new Date(isoDate).getTime() / 1000);
 
+// Instant d'un match, pour le tri : l'identifiant porte l'horodatage exact, plus
+// précis que la date, qui ne descend pas sous la journée. Repli sur la date pour
+// les matchs saisis à la main.
+export const matchTime = (match) => {
+  const parsed = String(match.id).match(/^tk-(\d+)-/);
+  return parsed ? Number(parsed[1]) : Date.parse(match.date) / 1000 || 0;
+};
+
 // Ancien format, antérieur à l'import Wavu : ewgf-<date ISO>-<p1>-<p2>.
 const legacyId = /^ewgf-(.+Z)-([^-]+)-([^-]+)$/;
 

@@ -1660,3 +1660,93 @@ form {
     opacity: 0.35;
   }
 }
+
+/* Page stats : calendrier d'activité (largeur fixe) et tendance côte à côte */
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.stats-row > .card {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .stats-row {
+    grid-template-columns: auto 1fr;
+  }
+}
+
+/* Stats par matchup, pleine largeur */
+.matchup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.matchup-select {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.matchup-select select {
+  min-width: 12rem;
+}
+
+.matchup-chart {
+  margin-top: 1rem;
+}
+
+.matchup-detail {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.matchup-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.matchup-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.matchup-tile-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.matchup-tile-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.matchup-recent {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.matchup-recent td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  white-space: nowrap;
+}

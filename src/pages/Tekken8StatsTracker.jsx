@@ -27,6 +27,7 @@ import {
   DEFAULT_BATTLE_TYPE,
   fetchBattles as fetchBattlesFromApi,
   latestRank,
+  migrateStageNames,
 } from "../services/ewgfApi";
 import { fetchPlayerMatches, wavuRowToMatch } from "../services/wavuApi";
 import { migrateMatchIds } from "../services/matchIdentity";
@@ -64,10 +65,13 @@ export default function Tekken8StatsTracker() {
 
   const [matches, setMatches] = useState(() => {
     const savedMatches = localStorage.getItem("tekken8Matches");
-    // Les matchs importés avant Wavu portent un identifiant propre à ewgf.gg.
-    return migrateMatchIds(
-      savedMatches ? JSON.parse(savedMatches) : [],
-      loadProfile().tekkenId
+    // Les matchs importés avant Wavu portent un identifiant propre à ewgf.gg,
+    // et ceux d'avant la table des stages un nom provisoire (« Stage 1200 »).
+    return migrateStageNames(
+      migrateMatchIds(
+        savedMatches ? JSON.parse(savedMatches) : [],
+        loadProfile().tekkenId
+      )
     );
   });
 
@@ -316,26 +320,6 @@ export default function Tekken8StatsTracker() {
 
   const avgOpponentRank = tekkenRanks[Math.round(avgOpponentRankValue)] || "-";
 
-  // Character Stats
-  const characterStats = [];
-  tekkenCharacters.forEach((character) => {
-    const charMatches = filteredMatches.filter(
-      (m) => m.opponentCharacter === character
-    );
-    if (charMatches.length > 0) {
-      const charWins = charMatches.filter((m) => m.result === "win").length;
-      const charWinRate = Math.round((charWins / charMatches.length) * 100);
-      characterStats.push({
-        name: character,
-        matches: charMatches.length,
-        winRate: charWinRate,
-      });
-    }
-  });
-
-  // Sort by number of matches
-  characterStats.sort((a, b) => b.matches - a.matches);
-
   // Stats des terrains
   const stageStats = [];
   tekkenStages.forEach((stage) => {
@@ -353,19 +337,6 @@ export default function Tekken8StatsTracker() {
 
   // Sort by number of matches
   stageStats.sort((a, b) => b.matches - a.matches);
-
-  // Recent matches winrate trend (last 10)
-  const recentMatches = [...filteredMatches].slice(-10);
-  const winRateTrend = [];
-  let trendWins = 0;
-
-  recentMatches.forEach((match, index) => {
-    if (match.result === "win") trendWins++;
-    winRateTrend.push({
-      match: `Match ${index + 1}`,
-      winRate: Math.round((trendWins / (index + 1)) * 100),
-    });
-  });
 
   // Progression des rangs
   const rankProgressionData = userProfile.rankHistory.map((entry, index) => {
@@ -544,9 +515,7 @@ export default function Tekken8StatsTracker() {
             winRate={winRate}
             mostPlayed={mostPlayed}
             avgOpponentRank={avgOpponentRank}
-            characterStats={characterStats}
             stageStats={stageStats}
-            winRateTrend={winRateTrend}
             opponentRankStats={opponentRankStats}
             tekkenCharacters={tekkenCharacters}
             tekkenStages={tekkenStages}

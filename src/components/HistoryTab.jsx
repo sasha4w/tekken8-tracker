@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { battleTypeLabel, DEFAULT_BATTLE_TYPE } from "../services/ewgfApi";
 import RankBadge from "./RankBadge";
+import { matchTime } from "../services/matchIdentity";
 
 const PAR_PAGE = 50;
-
-// L'identifiant porte l'horodatage exact (tk-<secondes>-<adversaire>), plus
-// précis que la date du match, qui ne descend pas sous la journée.
-const matchTime = (match) => {
-  const parsed = String(match.id).match(/^tk-(\d+)-/);
-  return parsed ? Number(parsed[1]) : Date.parse(match.date) / 1000 || 0;
-};
 
 const formatPoints = (points) => {
   const value = Number(points);
