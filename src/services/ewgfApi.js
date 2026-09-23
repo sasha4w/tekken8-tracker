@@ -1,6 +1,7 @@
 // Accès à l'API ewgf.gg (https://ewgf.gg/api-docs).
-// Le token n'est jamais exposé ici : le proxy Vite (voir vite.config.js) ajoute
-// l'en-tête Authorization à partir de EWGF_TOKEN avant de transmettre la requête.
+// Le token n'est jamais exposé ici : l'en-tête Authorization est ajouté côté
+// serveur, par le proxy de vite.config.js en dev et par la fonction
+// netlify/functions/ewgf.mjs en production, à partir de EWGF_TOKEN.
 
 import { matchKey, toUnixSeconds } from "./matchIdentity";
 
@@ -52,9 +53,13 @@ const errorMessage = (response) => {
   switch (response.status) {
     case 401:
     case 403:
-      return "Clé API refusée. Vérifie EWGF_TOKEN dans .env.local, puis relance npm run dev.";
+      return "Clé API ewgf.gg refusée. Vérifie EWGF_TOKEN (.env.local en dev, variables d'environnement Netlify en production).";
     case 404:
-      return "Tekken ID introuvable sur ewgf.gg. Vérifie l'ID saisi dans ton profil.";
+      // Une page HTML signale que la route /api/ewgf n'existe pas sur ce serveur
+      // (proxy absent), pas que le Tekken ID est inconnu d'ewgf.gg.
+      return response.headers.get("Content-Type")?.includes("json")
+        ? "Tekken ID introuvable sur ewgf.gg. Vérifie l'ID saisi dans ton profil."
+        : "Route /api/ewgf introuvable sur ce serveur : le proxy vers ewgf.gg n'est pas configuré.";
     case 429: {
       const reset = response.headers.get("X-Ratelimit-Reset");
       const until = reset

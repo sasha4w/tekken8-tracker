@@ -1,0 +1,14 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# En production, Netlify remplace le proxy de vite.config.js, qui n'existe
+# qu'avec `npm run dev`. /api/ewgf/* est servi par netlify/functions/ewgf.mjs,
+# car le token ne peut pas figurer ici en clair.
+
+# Wavu Wank ne demande pas d'authentification : une simple règle de proxy suffit.
+[[redirects]]
+  from = "/api/wavu/*"
+  to = "https://wank.wavu.wiki/:splat"
+  status = 200
+  force = true
