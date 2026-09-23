@@ -10,8 +10,11 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  Cell,
 } from "recharts";
 import ActivityHeatmap from "./ActivityHeatmap";
+import RankBadge from "./RankBadge";
+import { rankColor } from "../services/ranks";
 
 export default function StatsTab({
   filters,
@@ -224,7 +227,9 @@ export default function StatsTab({
 
         <div className="stat-card">
           <h3 className="stat-title">Rang moyen des adversaires</h3>
-          <div className="stat-value">{avgOpponentRank}</div>
+          <div className="stat-value">
+            <RankBadge rank={avgOpponentRank} />
+          </div>
         </div>
       </div>
 
@@ -372,8 +377,19 @@ export default function StatsTab({
                   }}
                   labelStyle={{ color: "#edf2f7" }}
                 />
-                <Legend />
-                <Bar dataKey="winRate" name="Win Rate %" fill="#ff8c00" />
+                {/* Légende explicite : les barres de win rate n'ont pas de
+                    couleur unique, elles prennent celle de leur rang. */}
+                <Legend
+                  payload={[
+                    { value: "Win Rate % (couleur du rang)", type: "square", color: "#b69121" },
+                    { value: "Nombre de matchs", type: "square", color: "#33aa33" },
+                  ]}
+                />
+                <Bar dataKey="winRate" name="Win Rate %">
+                  {opponentRankStats.map((entry) => (
+                    <Cell key={entry.name} fill={rankColor(entry.name) || "#ff8c00"} />
+                  ))}
+                </Bar>
                 <Bar dataKey="matches" name="Nombre de matchs" fill="#33aa33" />
               </BarChart>
             </ResponsiveContainer>

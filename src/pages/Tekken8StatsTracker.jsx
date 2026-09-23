@@ -30,6 +30,7 @@ import {
 } from "../services/ewgfApi";
 import { fetchPlayerMatches, wavuRowToMatch } from "../services/wavuApi";
 import { migrateMatchIds } from "../services/matchIdentity";
+import { normalizeRank } from "../services/ranks";
 
 // Ce qu'une source peut apporter à un match déjà connu. On écarte les champs
 // posés une fois pour toutes à la création (notes, difficulté), les valeurs
@@ -300,7 +301,7 @@ export default function Tekken8StatsTracker() {
 
   // Calculer le rang moyen des adversaires
   const getRankValue = (rank) => {
-    const index = tekkenRanks.findIndex((r) => r === rank);
+    const index = tekkenRanks.findIndex((r) => r === normalizeRank(rank));
     return index !== -1 ? index : 0;
   };
 

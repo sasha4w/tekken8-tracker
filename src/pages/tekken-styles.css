@@ -1612,3 +1612,51 @@ form {
 .match-history-table .action-cell {
   white-space: nowrap;
 }
+
+/* Pastilles de rang, couleurs ewgf.gg (voir src/services/ranks.js) */
+.rank-badge {
+  position: relative;
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+/* À partir de Tekken Emperor : halo doré */
+.rank-badge-halo {
+  box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.9), 0 0 10px 2px rgba(255, 200, 40, 0.55);
+}
+
+/* God of Destruction Infinity : reflet qui balaie la pastille */
+.rank-badge-shiny::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.65) 45%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: rank-shine 2.4s ease-in-out infinite;
+}
+
+@keyframes rank-shine {
+  60%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-badge-shiny::after {
+    animation: none;
+    transform: none;
+    opacity: 0.35;
+  }
+}

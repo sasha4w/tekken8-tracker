@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { battleTypeLabel, DEFAULT_BATTLE_TYPE } from "../services/ewgfApi";
+import RankBadge from "./RankBadge";
 
 const PAR_PAGE = 50;
 
@@ -242,7 +243,7 @@ export default function HistoryTab({
                       </div>
                     </td>
                     <td className="table-cell table-cell-center">
-                      {match.myRank}
+                      <RankBadge rank={match.myRank} />
                     </td>
                     <td className="table-cell">
                       <div className="char-container">
@@ -252,7 +253,7 @@ export default function HistoryTab({
                       </div>
                     </td>
                     <td className="table-cell table-cell-center">
-                      {match.opponentRank}
+                      <RankBadge rank={match.opponentRank} />
                     </td>
                     <td className="table-cell">{match.stage}</td>
                     <td className="table-cell">{match.opponentName}</td>

@@ -8,6 +8,7 @@ import {
   Area,
 } from "recharts";
 import React, { useMemo } from "react";
+import RankBadge from "./RankBadge";
 
 export default function ProfileSection({
   userProfile,
@@ -166,7 +167,9 @@ export default function ProfileSection({
           </div>
           <div className="profile-stat-card">
             <h3 className="stat-title">Rang actuel</h3>
-            <div className="stat-value">{userProfile.currentRank || "-"}</div>
+            <div className="stat-value">
+              <RankBadge rank={userProfile.currentRank || "-"} />
+            </div>
           </div>
         </div>
         {/* Progression de rang */}
@@ -226,7 +229,9 @@ export default function ProfileSection({
             </div>
             <div className="stat-card">
               <h3 className="stat-title">Rang moyen des adversaires</h3>
-              <div className="stat-value">{avgOpponentRank}</div>
+              <div className="stat-value">
+                <RankBadge rank={avgOpponentRank} />
+              </div>
             </div>
           </div>
         </div>

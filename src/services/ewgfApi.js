@@ -4,6 +4,7 @@
 // netlify/functions/ewgf.mjs en production, à partir de EWGF_TOKEN.
 
 import { matchKey, toUnixSeconds } from "./matchIdentity";
+import { normalizeRank } from "./ranks";
 
 const API_BASE = "/api/ewgf";
 
@@ -103,7 +104,7 @@ export function latestRank(battles, tekkenId) {
 
   return latest
     ? {
-        rank: latest[`${sideOf(latest, tekkenId)}_dan_rank`],
+        rank: normalizeRank(latest[`${sideOf(latest, tekkenId)}_dan_rank`]),
         date: latest.battle_at.split("T")[0],
       }
     : null;
@@ -125,9 +126,9 @@ export function battleToMatch(battle, tekkenId) {
     result: winnerSide === mySide ? "win" : "loss",
     score: `${myRounds}-${opponentRounds}`,
     myCharacter: battle[`${mySide}_char`],
-    myRank: battle[`${mySide}_dan_rank`],
+    myRank: normalizeRank(battle[`${mySide}_dan_rank`]),
     opponentCharacter: battle[`${opponentSide}_char`],
-    opponentRank: battle[`${opponentSide}_dan_rank`],
+    opponentRank: normalizeRank(battle[`${opponentSide}_dan_rank`]),
     opponentName: battle[`${opponentSide}_name`],
     stage: stageName(battle.stage_id),
     battleType: battle.battle_type,
